@@ -326,7 +326,9 @@ async function urlToFile(url,name){
   return new File([b],name,{type:b.type});
 }
 
+/* 🔹 ÚNICA PART MODIFICADA */
 sendBtn.onclick=async()=>{
+
   if(!accessGranted){
     alert("Accés no disponible.");
     return;
@@ -342,11 +344,50 @@ sendBtn.onclick=async()=>{
   fd.append("x",x);
   fd.append("y",y);
 
-  const res=await fetch(WEBHOOK_URL,{method:"POST",body:fd});
-  const blob=await res.blob();
-  result.src=URL.createObjectURL(blob);
-  result.style.display="block";
-  status.textContent="Fet ✅";
+  try{
+
+    const res=await fetch(WEBHOOK_URL,{method:"POST",body:fd});
+    const blob=await res.blob();
+
+    result.src=URL.createObjectURL(blob);
+    result.style.display="block";
+    status.textContent="Fet ✅";
+
+    const check=await fetch(VALIDATE_URL,{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ code: localStorage.getItem("accessCode") })
+    });
+
+    const data=await check.json();
+
+    if(data.success){
+
+      document.getElementById("accessStatus").textContent =
+        "Intents restants: " + data.data.remaining_attempts;
+
+      document.getElementById("accessStatus").style.color = "#2ecc71";
+
+      if(data.data.remaining_attempts <= 0){
+        accessGranted=false;
+        sendBtn.disabled=true;
+        status.textContent="Has esgotat els intents.";
+      }
+
+    }else{
+
+      localStorage.removeItem("accessCode");
+      await createNewCode();
+
+    }
+
+  }catch(err){
+
+    console.error(err);
+    status.textContent="Error generant imatge";
+
+  }
+
 };
 
 </script>
